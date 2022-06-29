@@ -1,10 +1,3 @@
-#include <iostream>
-#include <map>
-#include <string>
-#include <vector>
-
-using namespace std;
-
 #include <cassert>
 #include <iostream>
 #include <map>
@@ -79,7 +72,7 @@ ostream& operator<<(ostream& os, const BusesForStopResponse& r) {
 struct StopsForBusResponse {
     // Наполните полями эту структуру
     bool no_bus;
-    bool no_interchange;
+    // bool no_interchange;
     vector<pair<string, vector<string>>> stops;
 };
 
@@ -90,15 +83,27 @@ ostream& operator<<(ostream& os, const StopsForBusResponse& r) {
         return os;
     }
 
+    /*
     if (r.no_interchange) {
-        os << "No interchange"s;
+        os << "No interchange"s << endl;
         return os;
     }
+    */
 
+    bool first = true;
     for (const auto& [stop, buses]: r.stops) {
-        os << "Stop " << stop << ": ";
-        for (const auto& bus: buses) {
-            os << bus << " ";
+        if (!first) {
+            os << endl;
+        } else {
+            first = false;
+        }
+        os << "Stop " << stop << ":";
+        if (buses.empty()) {
+            os << " no interchange"s;
+        } else {
+            for (const auto& bus : buses) {
+                os << " " << bus;
+            }
         }
     }
 
@@ -118,10 +123,24 @@ ostream& operator<<(ostream& os, const AllBusesResponse& r) {
         return os;
     }
 
+    bool first = true;
     for (const auto& [bus, stops]: r.buses) {
-        os << "Bus " << bus << ": ";
+        if (!first) {
+            os << endl;
+        } else {
+            first = false;
+        }
+        os << "Bus " << bus  << ":";
+        // bool first_stop = true;
         for (const auto& stop: stops) {
-            os << stop << " ";
+            /*
+            if (!first_stop) {
+                os << " ";
+            } else {
+                first_stop = false;
+            }
+            */
+            os << " " << stop;
         }
     }
 
@@ -141,15 +160,82 @@ public:
 
     BusesForStopResponse GetBusesForStop(const string& stop) const {
         // Реализуйте этот метод
+
+        BusesForStopResponse response;
+        response.no_stop = true;
+
+        if (_stops_to_buses.count(stop) == 0) {
+            // return { true };
+            return response;
+        } 
+
+        // BusesForStopResponse response{false};
+        response.no_stop = false;
+        for (const string& bus : _stops_to_buses.at(stop)) {
+            response.buses.push_back(bus);
+        }
+        return response;
     }
 
     StopsForBusResponse GetStopsForBus(const string& bus) const {
         // Реализуйте этот метод
+        // vector<pair<string, vector<string>>> stops;
+        StopsForBusResponse response;
+        response.no_bus = true;
+
+        if (_buses_to_stops.count(bus) == 0) {
+            return response;
+        } 
+
+        // StopsForBusResponse response{false};
+        response.no_bus = false;
+        for (const string& stop : _buses_to_stops.at(bus)) {
+            // cout << "Stop "s << stop << ": "s;
+
+            // pair<string, vector<string>> buses_item;
+            auto& [_, buses] = response.stops.emplace_back(make_pair(stop, vector<string>()));
+            if (_stops_to_buses.at(stop).size() == 1) {
+                // response.no_interchange = true;
+            }
+            else {
+                // response.no_interchange = false;
+                for (const string& other_bus : _stops_to_buses.at(stop)) {
+                    if (bus != other_bus) {
+                        buses.emplace_back(other_bus);
+                        // cout << other_bus << " "s;
+                    }
+                }
+            }
+        }
+        
+        return response;
     }
 
     AllBusesResponse GetAllBuses() const {
         // Реализуйте этот метод
+
+        AllBusesResponse response;
+        response.no_buses = true;
+        if (_buses_to_stops.empty()) {
+            // cout << "No buses"s << endl;
+            return response;
+        } 
+
+        response.no_buses = false;
+        for (const auto& [bus, stops] : _buses_to_stops) {
+            // cout << "Bus "s << bus_item.first << ": "s;
+            // vector<pair<string, vector<string>>> buses;
+            auto& [_, stops_response] = response.buses.emplace_back(make_pair(bus, vector<string>()));
+            for (const string& stop : stops) {
+                // cout << stop << " "s;
+                stops_response.emplace_back(stop);
+            }
+            // cout << endl;
+        }
+        return response;
+
     }
+
 private:
     map<string, vector<string>> _buses_to_stops;
     map<string, vector<string>> _stops_to_buses;
